@@ -135,7 +135,7 @@ def recording(
             correlation_id=cid,
             extra_context=extra_context,
         )
-        target_logger.error("Diagnostic bundle written to %s", bundle_path)
+        target_logger.exception("Diagnostic bundle written to %s", bundle_path)
         raise
     finally:
         target_logger.removeHandler(handler)
