@@ -19,10 +19,11 @@ import time
 import traceback
 import uuid
 from collections import deque
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 from faultline.exceptions import ToolchainError
 
@@ -35,10 +36,8 @@ class _RingBufferHandler(logging.Handler):
         self.buffer: deque[str] = deque(maxlen=capacity)
 
     def emit(self, record: logging.LogRecord) -> None:
-        try:
+        with suppress(Exception):  # logging must never crash the run
             self.buffer.append(self.format(record))
-        except Exception:  # noqa: BLE001 - logging must never crash the run
-            pass
 
 
 @dataclass
