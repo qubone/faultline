@@ -20,6 +20,27 @@ from typing import TypeVar
 
 from faultline.exceptions import ToolchainError
 
+
+class InvalidCatalogRegistration(TypeError):
+    """Raised when a class registered with the error catalog is invalid."""
+
+    def __init__(self, exc_cls: object) -> None:
+        super().__init__(
+            f"{exc_cls!r} must subclass faultline.ToolchainError "
+            "(UserError, InfrastructureError, DataIntegrityError, or InternalError)"
+        )
+
+
+class DuplicateErrorCode(ValueError):
+    """Raised when an error code is registered more than once."""
+
+    def __init__(self, code: str, existing: type[ToolchainError]) -> None:
+        super().__init__(
+            f"Error code {code!r} is already registered to "
+            f"{existing.__module__}.{existing.__qualname__}"
+        )
+
+
 ExcT = TypeVar("ExcT", bound=type[ToolchainError])
 
 
@@ -85,15 +106,9 @@ class ErrorCatalog:
         def decorator(exc_cls: ExcT) -> ExcT:
             if code in self._by_code:
                 existing = self._by_code[code]
-                raise ValueError(
-                    f"Error code {code!r} is already registered to "
-                    f"{existing.__module__}.{existing.__qualname__}"
-                )
+                raise DuplicateErrorCode(code, existing)
             if not (isinstance(exc_cls, type) and issubclass(exc_cls, ToolchainError)):
-                raise TypeError(
-                    f"{exc_cls!r} must subclass faultline.ToolchainError "
-                    "(UserError, InfrastructureError, DataIntegrityError, or InternalError)"
-                )
+                raise InvalidCatalogRegistration(exc_cls)
 
             resolved_retryable = exc_cls.retryable if retryable is None else retryable
             spec = ErrorSpec(
